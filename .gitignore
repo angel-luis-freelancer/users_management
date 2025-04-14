@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# VS Code settings
+.vscode
+
+# Poetry
+poetry.lock
