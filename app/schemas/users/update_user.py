@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 from pydantic import BaseModel, StringConstraints
 
-class UserUpdateSchema(BaseModel):
+class UpdateUserSchema(BaseModel):
     first_name: Optional[
         Annotated[
             str,

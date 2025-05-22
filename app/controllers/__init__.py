@@ -1,3 +1,4 @@
-from .users import UserController  # Importa la clase desde users.py
+from .users import UserController 
+from .addresses import AddressController
 
-__all__ = ['UserController']
+__all__ = ['UserController', 'AddressController']

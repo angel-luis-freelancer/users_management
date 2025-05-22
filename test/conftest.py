@@ -1,10 +1,12 @@
 import pytest
+from flask import Flask
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import TestConfig
 from app.models import db 
 from app.config.settings import TestConfig
+from app.routes import main_bp, api_bp
 
 @pytest.fixture(scope='session')
 def db_engine():
@@ -27,3 +29,29 @@ def db_session(db_engine):
     session.close()
     transaction.rollback()
     connection.close()
+
+@pytest.fixture(scope='module')
+def app():
+    """Fixture para crear una aplicación Flask configurada para testing"""
+    app = Flask(__name__)
+    app.config['TESTING'] = True
+    app.config['SECRET_KEY'] = 'test-secret-key'
+    app.register_blueprint(main_bp, url_prefix='/')
+    app.register_blueprint(api_bp, url_prefix='/api')
+    yield app
+
+@pytest.fixture(scope='module')
+def client(app):
+    """Fixture para crear un cliente de prueba Flask"""
+    with app.test_client() as client:
+        yield client
+
+@pytest.fixture
+def mock_user_schema(monkeypatch):
+    """Mock para el esquema de creación de usuario"""
+    from unittest.mock import MagicMock
+    
+    mock_schema = MagicMock()
+    mock_schema.model_dump.return_value = {}
+    monkeypatch.setattr('app.schemas.user_schemas.CreateUserSchema', mock_schema)
+    return mock_schema

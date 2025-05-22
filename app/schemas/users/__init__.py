@@ -1,4 +1,4 @@
-from .create_user import UserCreateSchema
-from .update_user import UserUpdateSchema
+from .create_user import CreateUserSchema
+from .update_user import UpdateUserSchema
 
-__all__ = ["UserCreateSchema", "UserUpdateSchema"]
+__all__ = ["CreateUserSchema", "UpdateUserSchema"]

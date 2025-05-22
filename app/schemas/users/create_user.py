@@ -2,20 +2,31 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, field_validator, StringConstraints
 import unicodedata
 
-class UserCreateSchema(BaseModel):
+class  CreateUserSchema(BaseModel):
     first_name: Annotated[
         str,
         StringConstraints(
-            min_length=1,
+            min_length=2,
             max_length=30,
             strip_whitespace=True,
             pattern=r'^[a-zA-Z\s]+$'
         )
     ]
+    middle_name: Optional[
+        Annotated[
+            str,
+            StringConstraints(
+            min_length=2,
+            max_length=30,
+            strip_whitespace=True,
+            pattern=r'^[a-zA-Z\s]+$'
+            )
+        ]
+    ] = None
     last_name: Annotated[
         str,
         StringConstraints(
-            min_length=1,
+            min_length=2,
             max_length=30,
             strip_whitespace=True,
             pattern=r'^[a-zA-Z\s]+$'
@@ -33,7 +44,7 @@ class UserCreateSchema(BaseModel):
         ]
     ] = None
 
-    @field_validator('first_name', 'last_name')
+    @field_validator('first_name', 'last_name', 'middle_name')
     def normalize_and_capitalize_names(cls, v: str) -> str:
         if not v:
             return v

@@ -5,7 +5,6 @@ from uuid import uuid4
 from ..models import db, User
 
 class UserController:
-
     @staticmethod
     def get_user(key: str, value: str) -> Optional[Dict[str, Union[str, None]]]:
         try:
@@ -27,7 +26,7 @@ class UserController:
             return None
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error en consulta por UUID: {str(e)}")
+            raise ValueError(f"Error getting user: {str(e)}")
 
     @staticmethod
     def create_user(user_data: Dict[str, Any]) -> Dict[str, Union[str, None]]:
@@ -42,20 +41,19 @@ class UserController:
                 email=user_data['email'],
                 phone=user_data.get('phone'),  # Opcional
                 middle_name=user_data.get('middle_name'),  # Opcional
-                status='active'  # Valor por defecto
+                status='active'  # default value
             )
             db.session.add(new_user)
             db.session.commit()
-            
             return new_user.to_dict()
 
         except IntegrityError as e:
             db.session.rollback()
             if 'username' in str(e):
-                raise ValueError("El nombre de usuario ya existe")
+                raise ValueError("The username already exists")
             elif 'email' in str(e):
-                raise ValueError("El email ya está registrado")
-            raise ValueError("Error de integridad en la base de datos")
+                raise ValueError("The email already exists")
+            raise ValueError("Database integrity error")
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error al crear usuario: {str(e)}")
+            raise ValueError(f"Error creating the user: {str(e)}")

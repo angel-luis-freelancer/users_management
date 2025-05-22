@@ -4,7 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
 def init_app(app):
-    app.config.from_object(Config)
+    if 'SQLALCHEMY_DATABASE_URI' not in app.config:
+        app.config.from_object(Config)
     db.init_app(app)
     return app
 

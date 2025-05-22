@@ -8,7 +8,7 @@ def validate_query_params(allowed_params):
         def wrapper(*args, **kwargs):
             invalid_params = set(request.args.keys()) - set(allowed_params)
             if invalid_params:
-                raise BadRequest(f"Parámetros permitidos: {', '.join(allowed_params)}. Inválidos: {', '.join(invalid_params)}")
+                raise BadRequest(f"Allowed parameters: {', '.join(allowed_params)}. Invalids: {', '.join(invalid_params)}")
             return f(*args, **kwargs)
         return wrapper
     return decorator

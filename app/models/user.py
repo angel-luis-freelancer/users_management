@@ -4,7 +4,7 @@ from . import db
 class User(db.Model):
     __tablename__ = "users"
     
-    uuid = db.Column(db.String(36), primary_key=True)
+    uuid = db.Column(db.String(36), primary_key=True, autoincrement=False)
     first_name = db.Column(db.String(30), nullable=False)
     middle_name = db.Column(db.String(30))
     last_name = db.Column(db.String(30), nullable=False)
