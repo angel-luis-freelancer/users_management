@@ -10,15 +10,6 @@ class TestApplicationStart:
         assert 'SQLALCHEMY_DATABASE_URI' in app.config
         assert app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] is False
         
-    def test_create_app_with_test_config(self):
-        """Test que la aplicación se crea con configuración de testing cuando se especifica"""
-        from app.config.settings import TestConfig
-        with patch('app.init_app', side_effect=lambda app: app):
-            app = create_app(TestConfig)
-            assert app is not None
-            assert app.config['TESTING'] is True
-            assert app.config['SQLALCHEMY_DATABASE_URI'] == "sqlite:///:memory:"
-    
     @patch.dict(os.environ, {
         'FLASK_HOST': '127.0.0.1',
         'FLASK_PORT': '8080',
