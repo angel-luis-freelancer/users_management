@@ -6,20 +6,16 @@ from ...schemas import CreateAddressSchema
 
 addresses_bp = Blueprint('addresses', __name__)
 
-@addresses_bp.route('/', methods=['GET'])
-def list_addresses():
-    return {"message": "List Address"}
-
 @validate_query_params(['username', 'email'])
 @addresses_bp.route('/user', methods=['GET'])
 def get_users_address():
     try:
         params = dict(request.args)
         if len(params) > 1:
-            return jsonify({"error": "too many parameters, only admited 1"}), 400
+            raise ValueError("too many parameters, only admited 1")
         
         if len(params) == 0:
-            return jsonify({"error": "we need the parameter uuid, email or username"}), 400
+            raise ValueError("we need the parameters email or username")
         
         key = list(params.keys())[0]
         value = params[key]
@@ -36,10 +32,10 @@ def create_address():
     try:
         params = dict(request.args)
         if len(params) > 1:
-            return jsonify({"error": "too many parameters, only admited 1"}), 400
+            raise ValueError("too many parameters, only admited 1")
         
         if len(params) == 0:
-            return jsonify({"error": "we need the parameter uuid, email or username"}), 400
+            raise ValueError("we need the parameters email or username")
         
         key = list(params.keys())[0]
         value = params[key]

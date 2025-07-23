@@ -49,9 +49,9 @@ class UserController:
 
         except IntegrityError as e:
             db.session.rollback()
-            if 'username' in str(e):
+            if 'users.username' in str(e):
                 raise ValueError("The username already exists")
-            elif 'email' in str(e):
+            elif 'users.email' in str(e):
                 raise ValueError("The email already exists")
             raise ValueError("Database integrity error")
         except SQLAlchemyError as e:

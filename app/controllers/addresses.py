@@ -8,35 +8,39 @@ from ..models import db, Address, User
 class AddressController:
 
     @staticmethod
-    def get_address():
-        try:
-            pass
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            raise ValueError(f"Error getting the address: {str(e)}")
-        
-    @staticmethod
     def get_user_address(key: str, value: str) -> Optional[Dict[str, Union[str, None]]]:
         try:
             if key not in ('email', 'username'):
                 raise ValueError('User identifier is required. Please provide either a username or email.')
+            
+            user = db.session.execute(
+            db.select(User).filter_by(**{key: value})
+            ).scalar_one_or_none()
+
+            if not user:
+                raise ValueError('User dosent exists')
 
             addresses = db.session.execute(
                 db.select(Address)
                 .join(User, Address.user_uuid == User.uuid)
-                .where(getattr(User, key) == value)
+                .where(Address.user_uuid == user.uuid)
             ).scalars().all()
-            return [{
-                'uuid': addr.uuid,
-                'street': addr.street,
-                'number': addr.number,
-                'city': addr.city,
-                'state': addr.state,
-                'country': addr.country,
-                'instructions': addr.instructions,
-                'user_uuid': addr.user_uuid, 
-                key: value
-            } for addr in addresses]
+            return {
+                'metadata': {
+                    'username': user.username,
+                    'length': len(addresses)
+                },
+                'addresses': [
+                    {
+                        'street': addr.street,
+                        'number': addr.number,
+                        'city': addr.city,
+                        'state': addr.state,
+                        'country': addr.country,
+                        'instructions': addr.instructions
+                    } for addr in addresses
+                ]
+            }
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -47,7 +51,7 @@ class AddressController:
         try:
             user = UserController.get_user(key, value)
             if not user:
-                 return {'message': 'users dosent exists', 'status_code': 404}
+                raise ValueError('User dosent exists')
 
             uuid = str(uuid4())
             new_address = Address(
@@ -62,7 +66,15 @@ class AddressController:
             )
             db.session.add(new_address)
             db.session.commit()
-            return new_address.to_dict()
+            return {
+                'username': user['username'],
+                'street': new_address.street,
+                'number': new_address.number,
+                'city': new_address.city,
+                'state': new_address.state,
+                'country': new_address.country,
+                'instructions': new_address.instructions
+            }
         except IntegrityError as e:
             db.session.rollback()
             raise ValueError("Database integrity error")

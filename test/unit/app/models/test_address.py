@@ -6,10 +6,10 @@ class TestAddressModel:
     def test_address_creation(self, db_session):
         user = User(
             uuid=str(uuid4()),
-            first_name="Test",
-            last_name="User",
-            username="testuser",
-            email="test@example.com"
+            first_name="address",
+            last_name="creation",
+            username="adreesscreation",
+            email="adreesscreation@example.com"
         )
         db_session.add(user)
         db_session.commit()

@@ -2,9 +2,10 @@ import pytest
 from flask import Flask
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from uuid import uuid4
 
 from app.config import TestConfig
-from app.models import db 
+from app.models import db, User, Address
 from app.config.settings import TestConfig
 from app.routes import main_bp, api_bp
 
@@ -25,10 +26,12 @@ def db_session(db_engine):
     Session = sessionmaker(bind=db_engine)
     session = Session()
     db.session = session
-    yield session
-    session.close()
-    transaction.rollback()
-    connection.close()
+    try:
+        yield session
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 @pytest.fixture(scope='module')
 def app():
@@ -50,8 +53,41 @@ def client(app):
 def mock_user_schema(monkeypatch):
     """Mock para el esquema de creación de usuario"""
     from unittest.mock import MagicMock
-    
     mock_schema = MagicMock()
     mock_schema.model_dump.return_value = {}
     monkeypatch.setattr('app.schemas.user_schemas.CreateUserSchema', mock_schema)
     return mock_schema
+
+@pytest.fixture()
+def sample_user(db_session):
+    """Fixture para crear un usuario de prueba"""
+    unique_id=str(uuid4())
+    user = User(
+        uuid=unique_id,
+        first_name='Sample',
+        last_name='User',
+        username=f'sampleuser{unique_id[:8]}',
+        email=f'samplesample{unique_id[:8]}@sample.com',
+        status='active'
+    )
+    db_session.add(user)
+    db_session.commit()
+    return user
+
+@pytest.fixture()
+def sample_address(db_session, sample_user):
+    """Fixture para crear una dirección de prueba"""
+    unique_id = str(uuid4())
+    address = Address(
+        uuid=unique_id,
+        user_uuid=sample_user.uuid,
+        street='Calle Falsa',
+        number=123,
+        city='Springfield',
+        state='Illinois',
+        country='USA',
+        instructions='Casa azul con portón blanco'
+    )
+    db_session.add(address)
+    db_session.commit()
+    return address

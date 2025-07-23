@@ -6,9 +6,15 @@ def validate_body(schema_class):
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
+            json_data = request.get_json(silent=True)
+            if json_data is None:
+                return jsonify({
+                    "error": "Missing JSON body",
+                    "message": "You must provide a valid JSON body in the request"
+                }), 400
             try:
                 validated_data = schema_class(**request.get_json())
-                request.validated_data = validated_data  # Inyecta datos validados
+                request.validated_data = validated_data
                 return f(*args, **kwargs)
             except ValidationError as e:
                 errors = []

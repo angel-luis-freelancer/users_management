@@ -14,7 +14,9 @@ class CreateAddressSchema(BaseModel):
 
     @field_validator('street', 'city', 'state', 'country')
     def validate_address_fields(cls, v):
-        # Remove extra spaces and validate characters
+        """Remove extra spaces and validate characters"""
+        if v is None:
+            return v
         v = ' '.join(v.strip().split())
         if not re.match(r'^[\w\s\-\.\,\áéíóúÁÉÍÓÚñÑ]+$', v):
             raise ValueError("Contains invalid characters")
@@ -22,9 +24,7 @@ class CreateAddressSchema(BaseModel):
 
     @field_validator('instructions')
     def validate_instructions(cls, v):
-        if v is None:
+        if v is not None:
+            v = v.strip()
             return v
-        v = v.strip()
-        if len(v) > 255:
-            raise ValueError("Instructions cannot exceed 255 characters")
         return v
