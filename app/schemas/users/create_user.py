@@ -2,7 +2,7 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, EmailStr, field_validator, StringConstraints
 import unicodedata
 
-class  CreateUserSchema(BaseModel):
+class CreateUserSchema(BaseModel):
     first_name: Annotated[
         str,
         StringConstraints(

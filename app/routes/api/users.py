@@ -19,10 +19,6 @@ def get_user():
 
         key = list(params.keys())[0] 
         value = params[key]
-
-        print(value, flush=True)
-        
-
         data = UserController.get_user(key, value)
         return jsonify(data), 200
     except ValueError as e:
