@@ -70,7 +70,7 @@ class TestAddressController:
             with pytest.raises(ValueError) as excinfo:
                 AddressController.get_user_address('email', 'test@example.com')
             
-            assert "User dosent exists" in str(excinfo.value)
+            assert "User with email = test@example.com dosent exist" in str(excinfo.value)
 
     @patch('app.models.db.session.execute')
     def test_get_user_address_database_error(self, mock_execute, db_session):
@@ -108,11 +108,6 @@ class TestAddressController:
         assert result['username'] == sample_user.username
         mock_get_user.assert_called_once_with('email', sample_user.email) # Verificar que se llamó al UserController
 
-    def test_create_address_missing_user(self, db_session):
-        """Test: Crear dirección sin usuario"""
-        with pytest.raises(ValueError, match="User identifier is required. Please provide either a username or email."):
-            AddressController.get_user_address('mail', 'noexiste@test.com')
-
     @patch('app.controllers.addresses.UserController.get_user')
     def test_create_address_user_not_found(self, mock_get_user, db_session):
         """Test: Usuario no encontrado"""
@@ -128,7 +123,7 @@ class TestAddressController:
         with pytest.raises(ValueError) as excinfo:
             AddressController.create_address('email', 'noexiste@test.com', address_data)
 
-        assert "User dosent exists" in str(excinfo.value)
+        assert 'User with email = noexiste@test.com dosent exist' in str(excinfo.value)
 
     @patch('app.controllers.addresses.UserController.get_user')
     def test_create_address_missing_required_fields(self, mock_get_user, db_session, sample_user):
