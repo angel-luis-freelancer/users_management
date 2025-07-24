@@ -1,3 +1,4 @@
+from flask import json
 import pytest
 from unittest.mock import patch
 from app.controllers import UserController
@@ -32,28 +33,21 @@ class TestUsers:
         "username": "micaelapereyra",
         "uuid": "0abf2cf8-805d-4fb3-91c3-53840d628778"
     }
+    mock_user_update_payload = {"middle_name": "Isabela"}
 
+    mock_user_updated_data = {
+            "fields_updated": [["middle_name", "Isabela"]],
+            "identifier": {"username": "anatorres"}
+        }
 
     """
-     ___ ___ _____   _   _ ___ ___ ___   _____ ___ ___ _____ 
-    / __| __|_   _| | | | / __| __| _ \ |_   _| __/ __|_   _|
-   | (_ | _|  | |   | |_| \__ \ _||   /   | | | _|\__ \ | |  
-    \___|___| |_|    \___/|___/___|_|_\   |_| |___|___/ |_|                                                
+       __            __                __                         
+      / /____  _____/ /_   ____ ____  / /_   __  __________  _____
+     / __/ _ \/ ___/ __/  / __ `/ _ \/ __/  / / / / ___/ _ \/ ___/
+    / /_/  __(__  ) /_   / /_/ /  __/ /_   / /_/ (__  )  __/ /    
+    \__/\___/____/\__/   \__, /\___/\__/   \__,_/____/\___/_/     
+                        /____/                                                                             
     """
-
-    def test_get_user_no_params(self, client):
-        """Test cuando no se envían parámetros"""
-        response = client.get('/api/users/')
-        
-        assert response.status_code == 400
-        assert response.json == {"error": "we need the parameter uuid, email or username"}
-
-    def test_get_user_too_many_params(self, client):
-        """Test cuando se envían múltiples parámetros"""
-        response = client.get('/api/users/?username=johndoe&email=john@example.com')
-        
-        assert response.status_code == 400
-        assert response.json == {"error": "too many parameters, only admited 1"}
 
     @patch.object(UserController, 'get_user')
     def test_get_user_by_username(self, mock_get_user, client):
@@ -76,16 +70,6 @@ class TestUsers:
         mock_get_user.assert_called_once_with('email', self.mock_user_output_all_data["email"])
 
     @patch.object(UserController, 'get_user')
-    def test_get_user_by_uuid(self, mock_get_user, client):
-        """Test búsqueda por uuid exitosa"""
-        mock_get_user.return_value = self.mock_user_input_all_data
-        response = client.get(f"/api/users/?uuid={self.mock_user_output_all_data['uuid']}")
-        
-        assert response.status_code == 200
-        assert response.json == self.mock_user_input_all_data
-        mock_get_user.assert_called_once_with('uuid', self.mock_user_output_all_data['uuid'])
-
-    @patch.object(UserController, 'get_user')
     def test_get_user_value_error_exception(self, mock_get_user, client):
         """Test cuando UserController.get_user lanza ValueError"""
         error_message = "Catastrofe error"
@@ -98,10 +82,11 @@ class TestUsers:
 
 
     """
-     ___ ___ ___    _ _____ ___   _   _ ___ ___ ___   _____ ___ ___ _____ 
-    / __| _ \ __|  /_\_   _| __| | | | / __| __| _ \ |_   _| __/ __|_   _|
-    | (__|   / _| / _ \| | | _|  | |_| \__ \ _||   /   | | | _|\__ \ | |  
-     \___|_|_\___/_/ \_\_| |___| \___/ |___/___|_|_\   |_| |___|___/ |_|  
+       __            __                          __                                   
+      / /____  _____/ /_   _____________  ____ _/ /____     __  __________  _____
+     / __/ _ \/ ___/ __/  / ___/ ___/ _ \/ __ `/ __/ _ \   / / / / ___/ _ \/ ___/
+    / /_/  __(__  ) /_   / /__/ /  /  __/ /_/ / /_/  __/  / /_/ (__  )  __/ /  
+    \__/\___/____/\__/   \___/_/   \___/\__,_/\__/\___/   \__,_/____/\___/_/                                                                                       
     """
 
     def test_create_user_all_data(self, client):
@@ -141,7 +126,6 @@ class TestUsers:
         assert response.json['error'] == 'Validation Error'
         assert response.json['details'][0]['field'] == missing_field
         assert response.json['details'][0]['type'] == 'missing'
-    #    assert missing_field in response.json["error"].lower()
 
     @patch.object(UserController, 'create_user')
     def test_create_user_value_error_exception(self, mock_create_user, client):
@@ -159,3 +143,37 @@ class TestUsers:
         assert response.status_code == 400
         assert response.json == {"error": error_message}
         mock_create_user.assert_called_once_with(expected_data)
+
+    """
+       __            __                     __      __                              
+      / /____  _____/ /_   __  ______  ____/ /___ _/ /____     __  __________  _____
+     / __/ _ \/ ___/ __/  / / / / __ \/ __  / __ `/ __/ _ \   / / / / ___/ _ \/ ___/
+    / /_/  __(__  ) /_   / /_/ / /_/ / /_/ / /_/ / /_/  __/  / /_/ (__  )  __/ /    
+    \__/\___/____/\__/   \__,_/ .___/\__,_/\__,_/\__/\___/   \__,_/____/\___/_/     
+                             /_/                                                    
+    """
+
+    def test_update_user_data(self, client, sample_user):
+        """Test update de user por username exitosa"""
+
+        with patch(
+            'app.controllers.users.UserController.update_user', 
+            return_value=self.mock_user_updated_data
+        ):
+            response = client.patch(f'/api/users/update?username={sample_user.username}', 
+                                    json=self.mock_user_update_payload, content_type='application/json')
+
+            assert response.status_code == 200
+            assert response.json == self.mock_user_updated_data
+
+
+    @patch.object(UserController, 'update_user')
+    def test_update_user_value_error_exception(self, mock_update_user, client, sample_user):
+        """Test cuando UserController.update_user lanza ValueError"""
+        error_message = "Catastrofe error"
+        mock_update_user.side_effect = ValueError(error_message)
+        excepted_data = {'first_name': None, 'middle_name': 'Isabela', 'last_name': None, 'phone': None}
+        response = client.patch(f"/api/users/update?username={sample_user.username}", json=self.mock_user_update_payload)
+        assert response.status_code == 400
+        assert response.json == {"error": error_message}
+        mock_update_user.assert_called_once_with('username', sample_user.username, excepted_data   )

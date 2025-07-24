@@ -1,13 +1,15 @@
 import pytest
-from flask import Flask
+from flask import Flask, jsonify
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from uuid import uuid4
 
 from app.config import TestConfig
+from app.decorators.users.query_params import validate_user_query_params
 from app.models import db, User, Address
 from app.config.settings import TestConfig
 from app.routes import main_bp, api_bp
+
 
 @pytest.fixture(scope='session')
 def db_engine():
@@ -41,6 +43,10 @@ def app():
     app.config['SECRET_KEY'] = 'test-secret-key'
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(api_bp, url_prefix='/api')
+    @app.route("/api/test-user-query/")
+    @validate_user_query_params(['email'])
+    def test_user_query(query_key, query_value):
+        return jsonify({"message": "Success"}), 200
     yield app
 
 @pytest.fixture(scope='module')
@@ -51,7 +57,7 @@ def client(app):
 
 @pytest.fixture
 def mock_user_schema(monkeypatch):
-    """Mock para el esquema de creación de usuario"""
+    """Mock para el esquema de CreateUserSchema"""
     from unittest.mock import MagicMock
     mock_schema = MagicMock()
     mock_schema.model_dump.return_value = {}

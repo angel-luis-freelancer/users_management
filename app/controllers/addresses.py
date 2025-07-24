@@ -10,15 +10,12 @@ class AddressController:
     @staticmethod
     def get_user_address(key: str, value: str) -> Optional[Dict[str, Union[str, None]]]:
         try:
-            if key not in ('email', 'username'):
-                raise ValueError('User identifier is required. Please provide either a username or email.')
-            
             user = db.session.execute(
-            db.select(User).filter_by(**{key: value})
+                db.select(User).filter_by(**{key: value})
             ).scalar_one_or_none()
 
             if not user:
-                raise ValueError('User dosent exists')
+                raise ValueError(f"User with {key} = {value} dosent exist")
 
             addresses = db.session.execute(
                 db.select(Address)
@@ -51,7 +48,7 @@ class AddressController:
         try:
             user = UserController.get_user(key, value)
             if not user:
-                raise ValueError('User dosent exists')
+                raise ValueError(f"User with {key} = {value} dosent exist")
 
             uuid = str(uuid4())
             new_address = Address(

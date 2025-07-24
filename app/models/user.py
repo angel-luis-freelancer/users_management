@@ -1,10 +1,12 @@
 from typing import Dict, Union
+from uuid import uuid4
+
 from . import db
 
 class User(db.Model):
     __tablename__ = "users"
     
-    uuid = db.Column(db.String(36), primary_key=True, autoincrement=False)
+    uuid = db.Column(db.String(36), primary_key=True, autoincrement=False, default=uuid4)
     first_name = db.Column(db.String(30), nullable=False)
     middle_name = db.Column(db.String(30))
     last_name = db.Column(db.String(30), nullable=False)
