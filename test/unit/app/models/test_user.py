@@ -19,7 +19,7 @@ class TestUserModel:
         assert user.last_name == "User"
         assert user.username == "createtestuser"
         assert user.email == "create_test@example.com"
-        assert user.status == "active"
+        assert user.status == "pending"
         assert user.phone is None
         assert user.middle_name is None
 

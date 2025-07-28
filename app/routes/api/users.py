@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from ...controllers import UserController
 from ...decorators import validate_user_query_params, validate_body
-from ...schemas import CreateUserSchema, UpdateUserSchema
+from ...schemas import CreateUserSchema, UpdateUserSchema, UpdateStatusUserSchema
 
 users_bp = Blueprint('users', __name__)
 
@@ -31,6 +31,15 @@ def update_user(query_key, query_value):
     try:
         response = UserController.update_user(query_key, query_value, request.validated_data.model_dump())
         return jsonify(response), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     
+@users_bp.route('/status', methods=['PATCH'])
+@validate_user_query_params(['username', 'email'])
+@validate_body(UpdateStatusUserSchema)
+def update_user_status(query_key, query_value):
+    try:
+        response = UserController.update_user_status(query_key, query_value, request.validated_data.model_dump())
+        return jsonify(response), 204
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
