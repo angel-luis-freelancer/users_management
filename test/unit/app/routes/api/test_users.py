@@ -155,7 +155,6 @@ class TestUsers:
 
     def test_update_user_data(self, client, sample_user):
         """Test update de user por username exitosa"""
-
         with patch(
             'app.controllers.users.UserController.update_user', 
             return_value=self.mock_user_updated_data
@@ -174,6 +173,38 @@ class TestUsers:
         mock_update_user.side_effect = ValueError(error_message)
         excepted_data = {'first_name': None, 'middle_name': 'Isabela', 'last_name': None, 'phone': None}
         response = client.patch(f"/api/users/update?username={sample_user.username}", json=self.mock_user_update_payload)
+        assert response.status_code == 400
+        assert response.json == {"error": error_message}
+        mock_update_user.assert_called_once_with('username', sample_user.username, excepted_data   )
+
+    """
+      ______          __                     __      __               __        __                
+     /_  __/__  _____/ /_   __  ______  ____/ /___ _/ /____     _____/ /_____ _/ /___  _______    
+      / / / _ \/ ___/ __/  / / / / __ \/ __  / __ `/ __/ _ \   / ___/ __/ __ `/ __/ / / / ___/    
+     / / /  __(__  ) /_   / /_/ / /_/ / /_/ / /_/ / /_/  __/  (__  ) /_/ /_/ / /_/ /_/ (__  )     
+    /_/  \___/____/\__/   \__,_/ .___/\__,_/\__,_/\__/\___/  /____/\__/\__,_/\__/\__,_/____/      
+                              /_/                                                                 
+    """
+
+    def test_update_status_user(self, client, sample_user):
+        """Test update de status por username exitosa"""
+        with patch(
+            'app.controllers.users.UserController.update_user_status', 
+            return_value=None
+        ):
+            response = client.patch(f'/api/users/status?username={sample_user.username}', 
+                                    json={'status': 'pending'}, content_type='application/json')
+
+            assert response.status_code == 204
+            assert response.data == b''
+
+    @patch.object(UserController, 'update_user_status')
+    def test_update_status_user_value_error_exception(self, mock_update_user, client, sample_user):
+        """Test cuando UserController.update_user_status lanza ValueError"""
+        error_message = "Catastrofe error"
+        mock_update_user.side_effect = ValueError(error_message)
+        excepted_data = {'status': 'active'}
+        response = client.patch(f"/api/users/status?username={sample_user.username}", json={'status': 'active'})
         assert response.status_code == 400
         assert response.json == {"error": error_message}
         mock_update_user.assert_called_once_with('username', sample_user.username, excepted_data   )

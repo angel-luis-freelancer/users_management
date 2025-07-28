@@ -1,7 +1,14 @@
+from enum import Enum
 from typing import Dict, Union
 from uuid import uuid4
 
 from . import db
+
+class UserStatus(str, Enum):
+    ACTIVE = 'active'
+    PENDING = 'pending'
+    SUSPENDED = 'suspended'
+    DELETED = 'deleted'
 
 class User(db.Model):
     __tablename__ = "users"
@@ -11,7 +18,7 @@ class User(db.Model):
     middle_name = db.Column(db.String(30))
     last_name = db.Column(db.String(30), nullable=False)
     username = db.Column(db.String(30), nullable=False, unique=True)
-    status = db.Column(db.String(30), nullable=False, default='active')
+    status = db.Column(db.String(30), nullable=False, default=UserStatus.PENDING)
     email = db.Column(db.String(100), nullable=False, unique=True)
     phone = db.Column(db.String(20))
     addresses = db.relationship('Address', back_populates='user', lazy='dynamic')

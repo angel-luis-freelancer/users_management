@@ -11,10 +11,8 @@ class UserController:
             user = db.session.execute(
                 db.select(User).filter_by(**{key: value})
             ).scalar_one_or_none()
-
             if not user:
                 raise ValueError(f'User with {key} = {value} dosent exist')
-        
             if user:
                 return {
                     'uuid': user.uuid,
@@ -34,7 +32,6 @@ class UserController:
     def create_user(user_data: Dict[str, Any]) -> Dict[str, Union[str, None]]:
         try:
             uuid = str(uuid4())
-
             new_user = User(
                 uuid=uuid,
                 first_name=user_data['first_name'],
@@ -66,11 +63,10 @@ class UserController:
             result = db.session.execute(
                 db.select(User).filter_by(**{key: value})
             ).first()
-
             user = result[0] if result else None
+
             if not user:
                 raise ValueError(f"User with {key} = {value} dosent exist")
-
             fields_updated = []
 
             for field, new_value in user_data.items():
@@ -84,11 +80,31 @@ class UserController:
 
             if not fields_updated:
                 raise ValueError(f"No fields to updated for {key} = {value}")
+            
             db.session.commit()
             return {
-                "identifier": {key: value},
+                key: value,
                 "fields_updated": fields_updated
             }
         except SQLAlchemyError as e:
             db.session.rollback()
             raise ValueError(f"Error updating user: {str(e)}")
+        
+    @staticmethod
+    def update_user_status(key: str, value: str, status_data: Dict[str, Any]) -> Dict[str, str]:
+        try:
+            result = db.session.execute(
+                db.select(User).filter_by(**{key: value})
+            ).first()
+
+            user = result[0] if result else None
+            if not user:
+                raise ValueError(f"User with {key} = {value} dosent exist")
+
+            new_status = status_data.get('status')
+            user.status = new_status
+            db.session.commit()
+            return None
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            raise ValueError(f"Error updating user status: {str(e)}")

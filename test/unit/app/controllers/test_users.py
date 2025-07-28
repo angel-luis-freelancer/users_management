@@ -169,20 +169,49 @@ class TestUserController:
         result = UserController.update_user("username", sample_user.username, new_data)
         updated_user = db_session.query(User).filter_by(username=sample_user.username).first()
 
-        assert result["identifier"] == {"username": sample_user.username}
+        assert result["username"] == sample_user.username
         assert ("first_name", "NuevoNombre") in result["fields_updated"]
         assert updated_user.first_name == "NuevoNombre"
 
-    def test_sqlalchemy_error(self, db_session, sample_user, monkeypatch):
+    def test_update_sqlalchemy_error(self, db_session, sample_user, monkeypatch):
         """Debe hacer rollback y lanzar ValueError si SQLAlchemy lanza un error"""
-        def faulty_commit():
+        def faulty_user_commit():
             raise SQLAlchemyError("DB exploded")
 
-        monkeypatch.setattr("app.controllers.users.db.session.commit", faulty_commit)
-
+        monkeypatch.setattr("app.controllers.users.db.session.commit", faulty_user_commit)
         with pytest.raises(ValueError, match="Error updating user: DB exploded"):
             UserController.update_user("username", sample_user.username, {"first_name": "Otro"})
 
-"""
-usuario no encontrado, no hoy campos para actualizar, campos actualizados, error updating user
-"""
+    """
+      ______          __                     __      __               __        __                
+     /_  __/__  _____/ /_   __  ______  ____/ /___ _/ /____     _____/ /_____ _/ /___  _______    
+      / / / _ \/ ___/ __/  / / / / __ \/ __  / __ `/ __/ _ \   / ___/ __/ __ `/ __/ / / / ___/    
+     / / /  __(__  ) /_   / /_/ / /_/ / /_/ / /_/ / /_/  __/  (__  ) /_/ /_/ / /_/ /_/ (__  )     
+    /_/  \___/____/\__/   \__,_/ .___/\__,_/\__,_/\__/\___/  /____/\__/\__,_/\__/\__,_/____/      
+                              /_/                                                                 
+    """
+
+    def test_status_user_not_found(self, db_session):
+        """Debe lanzar ValueError si no se encuentra el usuario"""
+        with pytest.raises(ValueError, match="User with username = fakeuser dosent exist"):
+            UserController.update_user_status("username", "fakeuser", {"first_name": "Nuevo"})
+
+    def test_successful_update(self, db_session, sample_user):
+        """Debe actualizar el status correctamente"""
+        new_status = {'status': 'active'}
+        result = UserController.update_user_status("username", sample_user.username, new_status)
+        updated_user = db_session.query(User).filter_by(username=sample_user.username).first()
+
+        assert result is None
+        assert updated_user.status == new_status['status']
+
+    def test_status_sqlalchemy_error(self, db_session, sample_user, monkeypatch):
+        """Debe hacer rollback y lanzar ValueError si SQLAlchemy lanza un error"""
+        def raise_db_error(*args, **kwargs):
+            raise SQLAlchemyError("Simulated DB error")
+
+        monkeypatch.setattr(db_session, "commit", raise_db_error)
+        with pytest.raises(ValueError) as exc_info:
+            UserController.update_user_status("username", sample_user.username, {"status": "deleted"})
+
+        assert "Error updating user status" in str(exc_info.value)
