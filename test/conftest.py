@@ -6,14 +6,18 @@ from uuid import uuid4
 
 from app.config import TestConfig
 from app.decorators.users.query_params import validate_user_query_params
+from app.handlers import setup_error_handlers
 from app.models import db, User, Address
-from app.config.settings import TestConfig
 from app.routes import main_bp, api_bp
+from app.exceptions.base import BaseAppException
+from werkzeug.exceptions import InternalServerError
 
+class CustomAppException(BaseAppException):
+    def __init__(self, message="Custom error", status_code=418):
+        super().__init__(message, status_code)
 
 @pytest.fixture(scope='session')
 def db_engine():
-    """Crea un motor SQLite en memoria para testing"""
     engine = create_engine(TestConfig.SQLALCHEMY_DATABASE_URI)
     db.metadata.create_all(engine)
     yield engine
@@ -22,7 +26,6 @@ def db_engine():
 
 @pytest.fixture
 def db_session(db_engine):
-    """Provee una sesión de base de datos para cada test"""
     connection = db_engine.connect()
     transaction = connection.begin()
     Session = sessionmaker(bind=db_engine)
@@ -37,27 +40,45 @@ def db_session(db_engine):
 
 @pytest.fixture(scope='module')
 def app():
-    """Fixture para crear una aplicación Flask configurada para testing"""
     app = Flask(__name__)
     app.config['TESTING'] = True
     app.config['SECRET_KEY'] = 'test-secret-key'
+
     app.register_blueprint(main_bp, url_prefix='/')
     app.register_blueprint(api_bp, url_prefix='/api')
+
+    setup_error_handlers(app)
+
+    @app.route("/raise-custom-error")
+    def raise_custom_error():
+        raise CustomAppException("This is a test error", status_code=418)
+
+    @app.route("/test-method", methods=['GET'])
+    def test_method():
+        return jsonify({"ok": True})
+
+    @app.route("/raise-500")
+    def raise_500():
+        raise Exception("Unexpected error")
+
+    @app.route("/raise-internal")
+    def raise_internal():
+        raise InternalServerError("Simulated internal error")
+
     @app.route("/api/test-user-query/")
     @validate_user_query_params(['email'])
     def test_user_query(query_key, query_value):
         return jsonify({"message": "Success"}), 200
+
     yield app
 
 @pytest.fixture(scope='module')
 def client(app):
-    """Fixture para crear un cliente de prueba Flask"""
     with app.test_client() as client:
         yield client
 
 @pytest.fixture
 def mock_user_schema(monkeypatch):
-    """Mock para el esquema de CreateUserSchema"""
     from unittest.mock import MagicMock
     mock_schema = MagicMock()
     mock_schema.model_dump.return_value = {}
@@ -66,8 +87,7 @@ def mock_user_schema(monkeypatch):
 
 @pytest.fixture()
 def sample_user(db_session):
-    """Fixture para crear un usuario de prueba"""
-    unique_id=str(uuid4())
+    unique_id = str(uuid4())
     user = User(
         uuid=unique_id,
         first_name='Sample',
@@ -82,7 +102,6 @@ def sample_user(db_session):
 
 @pytest.fixture()
 def sample_address(db_session, sample_user):
-    """Fixture para crear una dirección de prueba"""
     unique_id = str(uuid4())
     address = Address(
         uuid=unique_id,

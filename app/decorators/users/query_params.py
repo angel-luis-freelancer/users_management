@@ -1,5 +1,7 @@
+from flask import request
 from functools import wraps
-from flask import request, jsonify
+
+from ...exceptions import MissingParameterException, TooManyParametersException, InvalidParameterException
 
 def validate_user_query_params(allowed_params):
     def decorator(f):
@@ -8,21 +10,14 @@ def validate_user_query_params(allowed_params):
             params = request.args.to_dict()
 
             if not params:
-                return jsonify({
-                    "error": f"Missing query parameter. You must provide one of: {', '.join(allowed_params)}"
-                }), 400
+                raise MissingParameterException(allowed_params)   
 
             if len(params) > 1:
-                return jsonify({
-                    "error": f"Too many parameters. Only one is allowed: {', '.join(allowed_params)}"
-                }), 400
+                raise TooManyParametersException(allowed_params)
 
             key = next(iter(params))
             if key not in allowed_params:
-                return jsonify({
-                    "error": f"Invalid parameter '{key}'. Allowed: {', '.join(allowed_params)}"
-                }), 400
-
+                raise InvalidParameterException(key, allowed_params)
             value = params[key]
             return f(*args, **kwargs, query_key=key, query_value=value)
         return wrapper

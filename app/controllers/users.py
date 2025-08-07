@@ -1,7 +1,8 @@
-from typing import Any, Optional, Dict, Union
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from typing import Any, Optional, Dict, Union
 from uuid import uuid4
 
+from ..exceptions import UserNotFoundException, UserAlreadyExistsException, InvalidUserDataException, DatabaseException
 from ..models import db, User
 
 class UserController:
@@ -12,7 +13,8 @@ class UserController:
                 db.select(User).filter_by(**{key: value})
             ).scalar_one_or_none()
             if not user:
-                raise ValueError(f'User with {key} = {value} dosent exist')
+                raise UserNotFoundException(field=key, value=value)
+            
             if user:
                 return {
                     'uuid': user.uuid,
@@ -26,11 +28,17 @@ class UserController:
                 }
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error getting user: {str(e)}")
+            raise DatabaseException(original_error=str(e))
 
     @staticmethod
     def create_user(user_data: Dict[str, Any]) -> Dict[str, Union[str, None]]:
         try:
+            user = db.session.execute(
+                db.select(User).filter_by(**{'email': user_data['email']})
+            ).scalar_one_or_none()
+            if user:
+                raise UserAlreadyExistsException(field='email', value=user_data['email'])
+            
             uuid = str(uuid4())
             new_user = User(
                 uuid=uuid,
@@ -49,13 +57,12 @@ class UserController:
         except IntegrityError as e:
             db.session.rollback()
             if 'users.username' in str(e):
-                raise ValueError("The username already exists")
-            elif 'users.email' in str(e):
-                raise ValueError("The email already exists")
-            raise ValueError("Database integrity error")
+                raise DatabaseException(original_error=str(e))
+
+            raise DatabaseException(original_error=str(e))
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error creating the user: {str(e)}")
+            raise DatabaseException(original_error=str(e))
         
     @staticmethod
     def update_user(key: str, value: str, user_data: Dict[str, Any]) -> str:
@@ -66,7 +73,7 @@ class UserController:
             user = result[0] if result else None
 
             if not user:
-                raise ValueError(f"User with {key} = {value} dosent exist")
+                raise UserNotFoundException(field=key, value=value)
             fields_updated = []
 
             for field, new_value in user_data.items():
@@ -79,7 +86,7 @@ class UserController:
                     fields_updated.append((field, new_value))
 
             if not fields_updated:
-                raise ValueError(f"No fields to updated for {key} = {value}")
+                raise InvalidUserDataException(field=key, value=value)
             
             db.session.commit()
             return {
@@ -88,7 +95,7 @@ class UserController:
             }
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error updating user: {str(e)}")
+            raise DatabaseException(original_error=str(e))
         
     @staticmethod
     def update_user_status(key: str, value: str, status_data: Dict[str, Any]) -> Dict[str, str]:
@@ -99,7 +106,7 @@ class UserController:
 
             user = result[0] if result else None
             if not user:
-                raise ValueError(f"User with {key} = {value} dosent exist")
+                raise UserNotFoundException(field=key, value=value)
 
             new_status = status_data.get('status')
             user.status = new_status
@@ -107,4 +114,4 @@ class UserController:
             return None
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error updating user status: {str(e)}")
+            raise DatabaseException(original_error=str(e))

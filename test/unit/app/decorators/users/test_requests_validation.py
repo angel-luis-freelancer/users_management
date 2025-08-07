@@ -1,7 +1,5 @@
-import pytest
-
-class TestValideteBodyCreateUser:
-    def test_create_user_valid_body(self, client):
+class TestValideteBody:
+    def test_valid_body(self, client):
         """Test para crear un usuario con un body válido"""
         payload = {
             "first_name": "fernando",
@@ -17,15 +15,23 @@ class TestValideteBodyCreateUser:
         assert data is not None
         assert "error" not in data
 
+    def test_invalid_body(self, client):
+        """Test para crear un usuario body invalido"""
+        payload = "\"\""
+        headers = {"content-type": "text/plain"}
+        response = client.post('/api/users/', json=payload, headers=headers)  
+        data = response.get_json()
+
+        assert response.status_code == 400
+        assert data["error"] == "Invalid JSON format"
+
     def test_create_user_missing_body(self, client):
         """Test para crear un usuario sin body"""
         response = client.post('/api/users/')  
         data = response.get_json()
-        
-        print(f"datitaa 🤞🤞🤞 {data}")
+
         assert response.status_code == 400
         assert data["error"] == "Missing JSON body"
-        assert data["message"] == "You must provide a valid JSON body in the request"
 
     def test_create_user_invalid_email(self, client):
         payload = {
@@ -39,6 +45,6 @@ class TestValideteBodyCreateUser:
         data = response.get_json()
 
         assert response.status_code == 400
-        assert data["error"] == "Validation Error"
-        assert isinstance(data["details"], list)
-        assert any("email" in err["field"] for err in data["details"])
+        assert data["error"] == "Request data validation failed"
+        assert isinstance(data["validation_errors"], list)
+        assert any("email" in err["field"] for err in data["validation_errors"])

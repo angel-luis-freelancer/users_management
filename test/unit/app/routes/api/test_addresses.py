@@ -1,7 +1,6 @@
 import pytest
 import json
-from unittest.mock import patch, MagicMock
-from flask import Flask
+from unittest.mock import patch
 
 from app.routes.api.addresses import addresses_bp
 
@@ -48,14 +47,6 @@ class TestAddresses:
         assert data['metadata']['username'] == sample_user.username
         mock_controller.assert_called_once_with(param_key, param_value)
 
-    @patch('app.routes.api.addresses.AddressController.get_user_address')
-    def test_get_users_address_controller_error(self, mock_controller, client):
-        """Test: Error del controlador"""
-        mock_controller.side_effect = ValueError("Database error")
-        response = client.get('/api/addresses/user?email=test@test.com')
-        
-        assert response.status_code == 400
-        assert "Database error" in response.get_json()["error"]
 
     """
        __            __                          __                    __    __                   
@@ -86,13 +77,3 @@ class TestAddresses:
         )
         assert response.status_code == 200
         assert response.get_json() == address_response
-
-    @patch('app.routes.api.addresses.AddressController.create_address')
-    def test_create_address_controller_error(self, mock_controller, client):
-        """Test: Error del controlador"""
-        mock_controller.side_effect = ValueError("Database error")
-        address_data = {'country': 'Nuevo País'}  
-        response = client.post('/api/addresses/?email={sample_user.email}', data=json.dumps(address_data), content_type='application/json')
-        
-        assert response.status_code == 400
-        assert "Database error" in response.get_json()["error"]

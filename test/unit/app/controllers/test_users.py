@@ -1,8 +1,13 @@
 import pytest
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from uuid import uuid4
 from unittest.mock import patch
+
 from app.controllers.users import UserController
+from app.exceptions import (
+    UserNotFoundException, 
+    UserAlreadyExistsException, 
+    InvalidUserDataException, 
+    DatabaseException)
 from app.models import User
 
 class TestUserController:
@@ -34,19 +39,22 @@ class TestUserController:
 
     def test_get_user_not_found(self, db_session):
         """Test cuando el usuario no existe"""
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(UserNotFoundException) as excinfo:
             UserController.get_user('username', 'nonexistent')
 
-        assert "User with username = nonexistent dosent exist" in str(excinfo.value)
+        assert excinfo.value.status_code == 404
+        assert "username" in excinfo.value.message
+        assert "nonexistent" in excinfo.value.message
+        assert "not found" in excinfo.value.message
 
     def test_get_user_database_error(self, db_session):
         """Test para errores de base de datos"""
         with patch('app.controllers.users.db.session.execute') as mock_execute:
-            mock_execute.side_effect = SQLAlchemyError("Simulated database error")
-            with pytest.raises(ValueError) as excinfo:
+            mock_execute.side_effect = SQLAlchemyError("(pymysql.err.OperationalError) (1044, 'Access denied for user 'user'@'localhost' to database 'database_name'")
+            with pytest.raises(DatabaseException) as excinfo:
                 UserController.get_user('username', 'testuser')
 
-            assert "Error getting user" in str(excinfo.value)
+            assert "Unknown error occurred" in str(excinfo.value)
 
 
     """
@@ -89,13 +97,13 @@ class TestUserController:
             'email': 'original@example.com'
         }
         UserController.create_user(user_data) 
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(DatabaseException) as excinfo:
             UserController.create_user({
             'first_name': 'Duplicate',
             'last_name': 'Username',
             'email': 'other@example.com'
         })
-        assert "The username already exists" in str(excinfo.value)
+        assert "Unknown error occurred" in str(excinfo.value)
 
     def test_create_user_duplicate_email(self, db_session):
         """Test para email duplicado"""
@@ -105,38 +113,40 @@ class TestUserController:
             'email': 'duplicate@example.com'
         }
         UserController.create_user(user_data)
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(UserAlreadyExistsException) as excinfo:
             UserController.create_user({
                 'first_name': 'Duplicate',
                 'last_name': 'Email',
                 'email': 'duplicate@example.com'
             })
-        assert "The email already exists" in str(excinfo.value)
+        assert "already exists" in str(excinfo.value)
+        assert "duplicate@example.com" in str(excinfo.value)
 
     def test_create_user_other_integrity_error(self, db_session):
         """Test para otros errores de integridad"""
         with patch('app.controllers.users.db.session.commit') as mock_commit:
             mock_commit.side_effect = IntegrityError("Simulated integrity error", None, None)
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DatabaseException) as excinfo:
                 UserController.create_user({
                     'first_name': 'Test',
                     'last_name': 'Integrity',
                     'email': 'integrity@test.com'
                 })
-            assert "Database integrity error" in str(excinfo.value)
+
+            assert "Simulated integrity error" in str(excinfo.value.details['original_error'])
 
     def test_create_user_general_database_error(self, db_session):
         """Test para otros errores de base de datos"""
         with patch('app.controllers.users.db.session.commit') as mock_commit:
             mock_commit.side_effect = SQLAlchemyError("Simulated database error")
-            with pytest.raises(ValueError) as excinfo:
+            with pytest.raises(DatabaseException) as excinfo:
                 UserController.create_user({
                     'first_name': 'Test',
                     'last_name': 'Error',
                     'email': 'error@test.com'
                 })
             
-            assert "Error creating the user" in str(excinfo.value)
+            assert excinfo.value.details['original_error'] == "Simulated database error"
 
 
     """
@@ -150,17 +160,27 @@ class TestUserController:
 
     def test_user_not_found(self, db_session):
         """Debe lanzar ValueError si no se encuentra el usuario"""
-        with pytest.raises(ValueError, match="User with username = fakeuser dosent exist"):
+        with pytest.raises(UserNotFoundException) as excinfo:
             UserController.update_user("username", "fakeuser", {"first_name": "Nuevo"})
+
+        assert excinfo.value.status_code == 404
+        assert "username" in excinfo.value.message
+        assert "fakeuser" in excinfo.value.message
+        assert "not found" in excinfo.value.message
 
     def test_no_fields_to_update(self, db_session, sample_user):
         """Debe lanzar ValueError si no hay campos para actualizar"""
         same_data = {"first_name": sample_user.first_name}
 
-        with pytest.raises(ValueError, match=f"No fields to updated for username = {sample_user.username}"):
+        with pytest.raises(InvalidUserDataException) as excinfo:
             UserController.update_user("username", sample_user.username, same_data)
 
-    def test_successful_update(self, db_session, sample_user):
+        assert excinfo.value.status_code == 400
+        assert "username" in excinfo.value.message
+        assert "No fields to update" in str(excinfo.value.message)
+        assert sample_user.username in excinfo.value.message
+
+    def test_successfull_update(self, db_session, sample_user):
         """Debe actualizar los campos correctamente"""
         new_data = {
             "first_name": "NuevoNombre",
@@ -179,9 +199,9 @@ class TestUserController:
             raise SQLAlchemyError("DB exploded")
 
         monkeypatch.setattr("app.controllers.users.db.session.commit", faulty_user_commit)
-        with pytest.raises(ValueError, match="Error updating user: DB exploded"):
+        with pytest.raises(DatabaseException) as excinfo:
             UserController.update_user("username", sample_user.username, {"first_name": "Otro"})
-
+        assert "DB exploded" in str(excinfo.value.details['original_error'])
     """
       ______          __                     __      __               __        __                
      /_  __/__  _____/ /_   __  ______  ____/ /___ _/ /____     _____/ /_____ _/ /___  _______    
@@ -193,8 +213,13 @@ class TestUserController:
 
     def test_status_user_not_found(self, db_session):
         """Debe lanzar ValueError si no se encuentra el usuario"""
-        with pytest.raises(ValueError, match="User with username = fakeuser dosent exist"):
+        with pytest.raises(UserNotFoundException) as excinfo:
             UserController.update_user_status("username", "fakeuser", {"first_name": "Nuevo"})
+
+        assert excinfo.value.status_code == 404
+        assert "username" in excinfo.value.message
+        assert "fakeuser" in excinfo.value.message
+        assert "not found" in excinfo.value.message
 
     def test_successful_update(self, db_session, sample_user):
         """Debe actualizar el status correctamente"""
@@ -208,10 +233,9 @@ class TestUserController:
     def test_status_sqlalchemy_error(self, db_session, sample_user, monkeypatch):
         """Debe hacer rollback y lanzar ValueError si SQLAlchemy lanza un error"""
         def raise_db_error(*args, **kwargs):
-            raise SQLAlchemyError("Simulated DB error")
+            raise SQLAlchemyError ("Simulated DB error")
 
         monkeypatch.setattr(db_session, "commit", raise_db_error)
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(DatabaseException) as excinfo:
             UserController.update_user_status("username", sample_user.username, {"status": "deleted"})
-
-        assert "Error updating user status" in str(exc_info.value)
+        assert "Simulated DB error" in str(excinfo.value.details['original_error'])

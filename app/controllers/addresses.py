@@ -1,9 +1,10 @@
+from sqlalchemy.exc import SQLAlchemyError
 from typing import Any, Optional, Dict, Union
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from uuid import uuid4
 
-from .users import UserController
+from ..exceptions import DatabaseException
 from ..models import db, Address, User
+from .users import UserController
 
 class AddressController:
 
@@ -13,9 +14,6 @@ class AddressController:
             user = db.session.execute(
                 db.select(User).filter_by(**{key: value})
             ).scalar_one_or_none()
-
-            if not user:
-                raise ValueError(f"User with {key} = {value} dosent exist")
 
             addresses = db.session.execute(
                 db.select(Address)
@@ -41,14 +39,12 @@ class AddressController:
 
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error getting the address: {str(e)}")
+            raise DatabaseException(original_error=str(e))
         
     @staticmethod
     def create_address(key: str, value: str, address_data: Dict[str, Any]) -> Optional[Dict[str, Union[str, None]]]:
         try:
             user = UserController.get_user(key, value)
-            if not user:
-                raise ValueError(f"User with {key} = {value} dosent exist")
 
             uuid = str(uuid4())
             new_address = Address(
@@ -72,10 +68,7 @@ class AddressController:
                 'country': new_address.country,
                 'instructions': new_address.instructions
             }
-        except IntegrityError as e:
-            db.session.rollback()
-            raise ValueError("Database integrity error")
         
         except SQLAlchemyError as e:
             db.session.rollback()
-            raise ValueError(f"Error creating the address: {str(e)}")
+            raise DatabaseException(original_error=str(e))

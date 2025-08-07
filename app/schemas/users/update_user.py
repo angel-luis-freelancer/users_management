@@ -3,6 +3,8 @@ from pydantic.config import ConfigDict
 from typing import Annotated, Optional
 import unicodedata
 
+from app.exceptions import InvalidNullValueExeption
+
 
 class UpdateUserSchema(BaseModel):
     first_name: Optional[
@@ -77,6 +79,9 @@ class UpdateUserSchema(BaseModel):
 
     @model_validator(mode='after')
     def at_least_one_field(cls, values):
-        if not any([values.first_name, values.middle_name, values.last_name, values.phone]):
-            raise ValueError("At least one field must be provided")
+        data = values.model_dump()
+        allowed_fields = ['first_name', 'middle_name', 'last_name', 'phone']
+        if all(data.get(field) is None for field in allowed_fields):
+            raise InvalidNullValueExeption(allowed_fields=allowed_fields)
+
         return values
