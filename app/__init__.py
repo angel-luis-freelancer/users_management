@@ -1,7 +1,8 @@
 from flask import Flask
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from .config import db, init_app
+from .config import db, init_app, setup_logging
+from .handlers import setup_error_handlers
 from .routes import main_bp, api_bp
 
 def create_app(config_class=None):
@@ -23,8 +24,10 @@ def create_app(config_class=None):
                 expire_on_commit=False
             )
         )
+
+    setup_error_handlers(app)
+    setup_logging(app)
     
-    # Configuración de manejo automático de sesiones
     @app.teardown_appcontext
     def shutdown_session(exception=None):
         """Cierra la sesión al finalizar cada request"""

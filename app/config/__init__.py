@@ -1,6 +1,7 @@
-from .settings import Config, TestConfig
 from flask_sqlalchemy import SQLAlchemy
 
+from .settings import Config, TestConfig
+from .logging import setup_logging
 db = SQLAlchemy()
 
 def init_app(app):
@@ -9,4 +10,4 @@ def init_app(app):
     db.init_app(app)
     return app
 
-__all__ = ['Config', 'TestConfig', 'db', 'init_app']
+__all__ = ['Config', 'db', 'init_app', 'setup_logging', 'TestConfig']

@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 import re
-from uuid import UUID
+
+from app.exceptions import InvalidNullValueExeption
 
 class CreateAddressSchema(BaseModel):
     street: Optional[str] = Field(None, max_length=50, description="Name of street")
@@ -13,13 +14,13 @@ class CreateAddressSchema(BaseModel):
 
 
     @field_validator('street', 'city', 'state', 'country')
-    def validate_address_fields(cls, v):
+    def validate_address_fields(cls, v, info):
         """Remove extra spaces and validate characters"""
         if v is None:
             return v
         v = ' '.join(v.strip().split())
         if not re.match(r'^[\w\s\-\.\,\áéíóúÁÉÍÓÚñÑ]+$', v):
-            raise ValueError("Contains invalid characters")
+            raise ValueError(f"Contains invalid characters {info.field_name}: {v}")
         return v
 
     @field_validator('instructions')

@@ -1,6 +1,8 @@
 import pytest
 from pydantic import ValidationError
-from app.schemas import UpdateUserSchema  # ajusta si tu path es diferente
+
+from app.exceptions import InvalidNullValueExeption
+from app.schemas import UpdateUserSchema
 
 class TestUpdateUserSchema:
     def test_valid_first_name_only(self):
@@ -25,9 +27,10 @@ class TestUpdateUserSchema:
         assert user.first_name == "A B"
 
     def test_no_fields_provided(self):
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(InvalidNullValueExeption) as excinfo:
             UpdateUserSchema()
-        assert "At least one field must be provided" in str(exc_info.value)
+        assert "Some fields cannot be null" in str(excinfo.value)
+        assert excinfo.value.status_code == 400
 
     @pytest.mark.parametrize("name_field,value", [
         ("first_name", "A"),            # muy corto
@@ -44,11 +47,11 @@ class TestUpdateUserSchema:
         "123_456_7890",          # carácter inválido "_"
     ])
     def test_invalid_phone(self, phone):
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError) as excinfo:
             UpdateUserSchema(first_name="John", phone=phone)
-        assert any(err["loc"] == ("phone",) for err in exc_info.value.errors())
+        assert any(err["loc"] == ("phone",) for err in excinfo.value.errors())
 
     def test_extra_field_should_fail(self):
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError) as excinfo:
             UpdateUserSchema(first_name="Jane", extra_field="not allowed")
-        assert "Extra inputs are not permitted" in str(exc_info.value)
+        assert "Extra inputs are not permitted" in str(excinfo.value)
